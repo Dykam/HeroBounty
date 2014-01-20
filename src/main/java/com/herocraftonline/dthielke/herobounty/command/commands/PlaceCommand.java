@@ -9,6 +9,7 @@ import com.herocraftonline.dthielke.herobounty.util.Messaging;
 
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.metadata.MetadataValue;
 
 import java.util.Collections;
 import java.util.Hashtable;
@@ -51,7 +52,7 @@ public class PlaceCommand extends BasicInteractiveCommand {
                 Player owner = (Player) executor;
                 String ownerName = owner.getName();
                 Player target = plugin.getServer().getPlayer(args[0]);
-                if (target != null) {
+                if (target != null && !isVanished(target)) {
                     String targetName = target.getName();
                     if (target != owner) {
                         if (HeroBounty.permission.playerHas(owner, "herobounty.new") || HeroBounty.permission.playerHas(owner, "herobounty.place")) {
@@ -106,6 +107,15 @@ public class PlaceCommand extends BasicInteractiveCommand {
             }
             return false;
         }
+
+        private boolean isVanished(Player player) {
+            for (MetadataValue value : player.getMetadata("value")) {
+                Object vanished = value.value();
+                if(vanished instanceof Boolean && (Boolean)vanished)
+                    return true;
+            }
+            return false;
+        }
     }
 
     class StateB extends BasicInteractiveCommandState {
@@ -120,17 +130,17 @@ public class PlaceCommand extends BasicInteractiveCommand {
             if (executor instanceof Player) {
                 List<Bounty> bounties = plugin.getBountyManager().getBounties();
                 Bounty bounty = pendingBounties.remove(executor);
-                int totalValue = bounty.getValue() + bounty.getPostingFee(); 
+                int totalValue = bounty.getValue() + bounty.getPostingFee();
 
                 if (HeroBounty.economy.getBalance(bounty.getOwner()) >= totalValue) {
                     bounties.add(bounty);
                     Collections.sort(bounties);
-    
+
                     HeroBounty.economy.withdrawPlayer(bounty.getOwner(), totalValue);
                     Messaging.send(executor, "§7[§eBounty§7] Placed a bounty on $1's head for $2.", bounty.getTarget(), HeroBounty.economy.format(bounty.getValue()));
                     Messaging.send(executor, "§7[§eBounty§7] You have been charged $1 for posting this bounty.", HeroBounty.economy.format(bounty.getPostingFee()));
                     Messaging.broadcast("§7[§eBounty§7] A new bounty has been placed for $1.", HeroBounty.economy.format(bounty.getValue()));
-    
+
                     plugin.saveData();
                     return true;
                 }
